@@ -33,10 +33,6 @@ const els = {
     wire: document.getElementById("viewerWire"),
 };
 
-if (els.canvas) {
-    main();
-}
-
 /** Turn a file name into a human-readable bone label (mirrors app.js). */
 function prettyName(fileName) {
     const stem = fileName.replace(/\.[^.]+$/, "");
@@ -57,12 +53,41 @@ let controls;
 let group;
 const entries = []; // { name, mesh, material, color }
 
+/** Probe for a usable WebGL context and return a reason string if unavailable. */
+function webglSupport() {
+    try {
+        const canvas = document.createElement("canvas");
+        const gl =
+            canvas.getContext("webgl2") ||
+            canvas.getContext("webgl") ||
+            canvas.getContext("experimental-webgl");
+        if (!gl) return "no-context";
+        return null;
+    } catch (err) {
+        return err && err.message ? err.message : "exception";
+    }
+}
+
 function main() {
+    const missing = webglSupport();
+    if (missing) {
+        console.error("WebGL unavailable:", missing);
+        setStatus(
+            "WebGL is disabled or unavailable in this browser, so the 3D viewer cannot start. " +
+            "Enable hardware acceleration / WebGL in your browser settings (see the page notes), " +
+            "update your graphics driver, or try a different browser."
+        );
+        return;
+    }
     try {
         initScene();
     } catch (err) {
         console.error(err);
-        setStatus("WebGL is not available in this browser, so the 3D viewer cannot start.");
+        setStatus(
+            "The 3D viewer failed to start: " +
+            (err && err.message ? err.message : String(err)) +
+            ". See the browser console for details."
+        );
         return;
     }
     loadAll();
@@ -108,10 +133,15 @@ function initScene() {
     group = new THREE.Group();
     scene.add(group);
 
+    renderer.domElement.addEventListener("webglcontextlost", (event) => {
+        event.preventDefault();
+        setStatus("The WebGL context was lost (often a GPU driver reset). Reload the page to retry.");
+    });
+
     new ResizeObserver(onResize).observe(els.canvas);
 
-    els.reset.addEventListener("click", fitView);
-    els.wire.addEventListener("change", () => {
+    els.reset?.addEventListener("click", fitView);
+    els.wire?.addEventListener("change", () => {
         for (const entry of entries) entry.material.wireframe = els.wire.checked;
     });
 
@@ -128,7 +158,7 @@ function onResize() {
 }
 
 function animate() {
-    controls.autoRotate = els.rotate.checked;
+    controls.autoRotate = !!els.rotate?.checked;
     controls.update();
     renderer.render(scene, camera);
 }
@@ -273,4 +303,10 @@ function buildList() {
         li.append(label);
         els.list.append(li);
     }
+}
+
+// Kick things off only after every module-level binding above has been
+// initialised (otherwise `renderer` and friends are still in the TDZ).
+if (els.canvas) {
+    main();
 }
