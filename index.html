@@ -7,6 +7,14 @@
     <title>Educational Atlas of 3D Bones</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="recources/logo.png">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -47,7 +55,7 @@
         </section>
 
         <section class="atlas">
-            <h2>Browse the Atlas</h2>
+            <h2>Download</h2>
             <div class="stats" id="datasetCount">Loading bones&hellip;</div>
             <div class="table-container">
                 <table id="bonesTable">
@@ -64,6 +72,30 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </section>
+
+        <section class="viewer">
+            <h2>3D Viewer</h2>
+            <p>
+                All mesh models together in one interactive scene. <strong>Drag</strong> to rotate,
+                <strong>scroll</strong> to zoom,
+                <strong>right-drag</strong> to pan.
+            </p>
+            <div class="viewer-layout">
+                <div class="viewer-sidebar">
+                    <div class="viewer-toolbar">
+                        <button type="button" id="viewerReset">Reset view</button>
+                        <label><input type="checkbox" id="viewerRotate"> Auto-rotate</label>
+                        <label><input type="checkbox" id="viewerWire"> Wireframe</label>
+                    </div>
+                    <ul class="viewer-list" id="viewerList">
+                        <li class="viewer-list-empty">Loading model list&hellip;</li>
+                    </ul>
+                </div>
+                <div class="viewer-canvas" id="viewerCanvas">
+                    <div class="viewer-status" id="viewerStatus">Loading 3D models&hellip;</div>
+                </div>
             </div>
         </section>
 
@@ -92,6 +124,7 @@
     </footer>
 
     <script src="app.js"></script>
+    <script type="module" src="viewer.js"></script>
 </body>
 
 </html>
