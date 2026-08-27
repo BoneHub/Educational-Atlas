@@ -224,6 +224,12 @@ a:hover {
     text-decoration: none;
 }
 
+.btn-link.is-busy {
+    opacity: 0.7;
+    pointer-events: none;
+    cursor: progress;
+}
+
 .unavailable {
     color: #999;
 }

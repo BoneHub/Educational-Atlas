@@ -24,6 +24,8 @@ const els = {
     count: document.getElementById("datasetCount"),
 };
 
+els.body.addEventListener("click", handleDownloadClick);
+
 /** Turn a file name into a human-readable bone label. */
 function prettyName(fileName) {
     const stem = fileName.replace(/\.[^.]+$/, "");
@@ -95,7 +97,56 @@ function renderCell(item) {
     const ext = fileExtension(item.name);
     const size = humanSize(item.size);
     const title = size ? `${item.name} (${size})` : item.name;
-    return `<a class="btn-link" href="${item.download_url}" download title="${title}">Download ${ext}</a>`;
+    // A plain link to raw.githubusercontent.com opens text-based formats (e.g.
+    // IGES) inline in the browser instead of downloading. We keep the href for
+    // right-click / middle-click, but the click handler fetches the file and
+    // saves it as a real download.
+    const safeName = item.name.replace(/"/g, "&quot;");
+    return (
+        `<a class="btn-link" href="${item.download_url}" download="${safeName}"` +
+        ` data-download-url="${item.download_url}" data-download-name="${safeName}"` +
+        ` title="${title}">Download ${ext}</a>`
+    );
+}
+
+async function handleDownloadClick(event) {
+    const link = event.target.closest("a[data-download-url]");
+    if (!link) return;
+
+    // Let modified clicks (new tab, etc.) behave normally.
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    if (link.dataset.busy) return;
+
+    const url = link.dataset.downloadUrl;
+    const fileName = link.dataset.downloadName || "model";
+    const original = link.textContent;
+    link.dataset.busy = "1";
+    link.classList.add("is-busy");
+    link.textContent = "Downloading…";
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+    } catch (err) {
+        console.error("Download failed", err);
+        // Fall back to opening the raw file directly.
+        window.open(url, "_blank", "noopener");
+    } finally {
+        delete link.dataset.busy;
+        link.classList.remove("is-busy");
+        link.textContent = original;
+    }
 }
 
 function render(rows) {
