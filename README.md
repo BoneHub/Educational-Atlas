@@ -7,7 +7,7 @@
 <p>👆 Click above to browse the Atlas 👆</p>
 
 
-<img src="./logo-with-text.png" width="30%" />
+<img src="./resources/logo-with-text.png" width="30%" />
 
 <br>
 <br>
