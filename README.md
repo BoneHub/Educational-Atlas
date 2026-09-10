@@ -7,7 +7,7 @@
 <p>👆 Click above to browse the Atlas 👆</p>
 
 
-<img src="./resources/logo-with-text.png" width="30%" />
+<img src="./webpage/resources/logo-with-text.png" width="30%" />
 
 <br>
 <br>
@@ -23,6 +23,25 @@ This repository hosts publicly available 3D bone models &mdash; each provided bo
 as a surface **mesh** and as a **CAD** model &mdash; for use in anatomy teaching,
 visualization, 3D printing, and student projects.
 
+
+## Repository structure
+
+```
+data/                  Bone models (the source of truth for the atlas)
+  mesh/                Surface meshes (.stl)
+  cad/                 CAD models (.iges)
+webpage/               The website published to GitHub Pages
+  index.html
+  css/styles.css
+  js/app.js            Builds the download table from the GitHub API
+  js/viewer.js         Three.js viewer for the meshes
+  resources/           Logos and icons
+.github/workflows/     CI: deploys webpage/ to GitHub Pages
+```
+
+The site has no build step. It reads the contents of `data/` through the GitHub
+API at runtime, so adding or renaming a model file is enough for it to show up
+online &mdash; no page edits required.
 
 ## Disclaimer
 
