@@ -21,6 +21,9 @@ const PALETTE = [
 // Meshes downloaded in parallel per viewer.
 const CONCURRENCY = 6;
 
+// Emissive tint of the bone under the cursor, or under the pointer in the list.
+const HIGHLIGHT = 0x664400;
+
 // The meshes use patient coordinates: +Z superior, -Y anterior, +X left.
 const UP = new THREE.Vector3(0, 0, 1);
 // Direction from the skeleton towards the camera: in front, slightly to its left and above.
@@ -48,6 +51,13 @@ class SubjectViewer {
         this.list = root.querySelector(".viewer-list");
         this.entries = []; // { region, bone, name, mesh, material }
         this.groups = new Map(); // region id -> { checkbox, entries }
+
+        // Naming the bone under the cursor.
+        this.raycaster = new THREE.Raycaster();
+        this.pointer = new THREE.Vector2();
+        this.pointerOnCanvas = false;
+        this.pickPending = false;
+        this.highlighted = null;
 
         // Every bone of this subject, grouped by body part.
         this.regions = manifest.regions
@@ -94,6 +104,7 @@ class SubjectViewer {
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.autoRotateSpeed = 1.5;
+        this.controls.addEventListener("change", () => (this.pickPending = true));
 
         this.scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3542, 1.1));
         // Lights follow the camera so the side being looked at is always lit.
@@ -114,6 +125,8 @@ class SubjectViewer {
 
         new ResizeObserver(() => this.onResize()).observe(this.canvas);
 
+        this.initHover();
+
         const ui = (name) => this.root.querySelector(`[data-action="${name}"]`);
         this.rotate = ui("rotate");
         ui("reset").addEventListener("click", () => this.fitView());
@@ -126,8 +139,75 @@ class SubjectViewer {
         this.renderer.setAnimationLoop(() => {
             this.controls.autoRotate = this.rotate.checked;
             this.controls.update();
+            // A moving camera slides a different bone under a resting cursor.
+            if (this.pickPending) {
+                this.pickPending = false;
+                this.pickBone();
+            }
             this.renderer.render(this.scene, this.camera);
         });
+    }
+
+    /** Name the bone under the cursor in a label that follows it. */
+    initHover() {
+        this.tooltip = document.createElement("div");
+        this.tooltip.className = "viewer-tooltip";
+        this.tooltip.hidden = true;
+        this.canvas.append(this.tooltip);
+
+        const canvas = this.renderer.domElement;
+        canvas.addEventListener("pointermove", (event) => {
+            const rect = canvas.getBoundingClientRect();
+            this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            this.pointerOnCanvas = true;
+            this.moveTooltip(event.clientX - rect.left, event.clientY - rect.top);
+            this.pickBone();
+        });
+        canvas.addEventListener("pointerleave", () => {
+            this.pointerOnCanvas = false;
+            this.setHighlight(null);
+        });
+        // A touch ends without leaving the canvas.
+        canvas.addEventListener("pointercancel", () => {
+            this.pointerOnCanvas = false;
+            this.setHighlight(null);
+        });
+    }
+
+    moveTooltip(x, y) {
+        // Flip the label to the other side of the cursor near the right edge,
+        // where the canvas would otherwise clip it.
+        const flip = x > this.canvas.clientWidth - 170;
+        this.tooltip.style.left = `${x}px`;
+        this.tooltip.style.top = `${y}px`;
+        this.tooltip.style.transform = flip
+            ? "translate(calc(-100% - 14px), -50%)"
+            : "translate(14px, -50%)";
+    }
+
+    pickBone() {
+        if (!this.pointerOnCanvas || this.entries.length === 0) return;
+        this.raycaster.setFromCamera(this.pointer, this.camera);
+        // Raycaster does not skip hidden meshes, so ignore them here.
+        const hit = this.raycaster
+            .intersectObjects(this.group.children, false)
+            .find((intersection) => intersection.object.visible);
+        this.setHighlight(hit ? hit.object.userData.entry : null);
+    }
+
+    /** Highlight one bone and name it, or clear the highlight when null. */
+    setHighlight(entry) {
+        if (entry === this.highlighted) return;
+        this.highlighted?.material.emissive.setHex(0x000000);
+        this.highlighted = entry || null;
+
+        if (entry) {
+            entry.material.emissive.setHex(HIGHLIGHT);
+            this.tooltip.textContent = entry.name;
+        }
+        this.tooltip.hidden = !entry;
+        this.renderer.domElement.style.cursor = entry ? "pointer" : "";
     }
 
     onResize() {
@@ -233,9 +313,12 @@ class SubjectViewer {
         label.append(checkbox, text);
         li.append(label);
 
-        // Highlight the bone while hovering its name.
-        li.addEventListener("mouseenter", () => entry.material.emissive.setHex(0x664400));
-        li.addEventListener("mouseleave", () => entry.material.emissive.setHex(0x000000));
+        // Highlight the bone while hovering its name (without the tooltip, the
+        // name is right there).
+        li.addEventListener("mouseenter", () => entry.material.emissive.setHex(HIGHLIGHT));
+        li.addEventListener("mouseleave", () => {
+            if (entry !== this.highlighted) entry.material.emissive.setHex(0x000000);
+        });
 
         entry.setVisible = (visible) => {
             checkbox.checked = visible;
@@ -277,6 +360,7 @@ class SubjectViewer {
                 const mesh = new THREE.Mesh(geometry, material);
                 this.group.add(mesh);
                 const entry = { region, bone, order, name: boneLabel(bone.id), mesh, material };
+                mesh.userData.entry = entry; // picked up when hovering the bone
                 this.entries.push(entry);
                 this.addListItem(entry);
                 return true;
