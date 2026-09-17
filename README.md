@@ -40,18 +40,21 @@ webpage/               The website published to GitHub Pages
                        Mesh/<01_Male|02_Female>/<body part>/<BONE>.stl
   resources/           Logos and icons
 scripts/
-  build_manifest.py    Regenerates webpage/data/manifest.json from a dataset clone
-.github/workflows/     CI: deploys webpage/ to GitHub Pages
+  build_manifest.py    Regenerates webpage/data/manifest.json from the Hugging Face API
+.github/workflows/     CI: rebuilds the manifest, then deploys webpage/ to GitHub Pages
 ```
 
-The site has no build step. When the dataset changes, regenerate the manifest from a
-local clone of the Hugging Face repository and commit it:
+The site has no build step. The deploy workflow regenerates the manifest on every run and
+commits it when it changed, so after updating the dataset it is enough to run the
+**Deploy webpage** workflow (Actions tab &rarr; Run workflow). The same command can be run
+locally &mdash; it reads the file tree straight from the Hugging Face API, so no clone of
+the dataset is needed:
 
 ```
-python scripts/build_manifest.py path/to/visible-human-3d-models
+python scripts/build_manifest.py
 ```
 
-Only files tracked by git in the clone are listed. The 3D viewers load the STL files in
+Only what is published on Hugging Face is listed. The 3D viewers load the STL files in
 `webpage/Mesh/`, using the file names in the manifest; bones whose file is missing are
 skipped.
 

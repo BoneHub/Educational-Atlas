@@ -1,7 +1,9 @@
 # Publishes the static site in webpage/ to GitHub Pages.
 #
-# Downloads are served by the Hugging Face dataset; the site only ships the
-# manifest (webpage/data/manifest.json) and the viewer meshes (webpage/Mesh/).
+# Every run first rebuilds webpage/data/manifest.json from the Hugging Face
+# dataset and commits it if it changed, so the published page always lists what
+# the dataset actually contains. Downloads themselves are served by Hugging
+# Face; the site only ships the manifest and the viewer meshes (webpage/Mesh/).
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 name: Deploy webpage
@@ -11,11 +13,12 @@ on:
     branches: [main]
     paths:
       - "webpage/**"
+      - "scripts/build_manifest.py"
       - ".github/workflows/deploy-webpage.yml"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # to commit the regenerated manifest
   pages: write
   id-token: write
 
@@ -33,6 +36,24 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      # Reads the dataset file tree over the Hugging Face API (standard library
+      # only, so no dependencies to install).
+      - name: Rebuild the manifest from Hugging Face
+        run: python3 scripts/build_manifest.py
+
+      # A push made with GITHUB_TOKEN does not start another workflow run, so
+      # committing the manifest here cannot loop back into this workflow.
+      - name: Commit the manifest if it changed
+        run: |
+          if git diff --quiet -- webpage/data/manifest.json; then
+            echo "Manifest is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update bone manifest from Hugging Face" -- webpage/data/manifest.json
+          git push origin HEAD:${{ github.ref_name }}
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
