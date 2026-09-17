@@ -1,6 +1,6 @@
 {
     "repo": "BoneHub/visible-human-3d-models",
-    "revision": "7185a6f1d18df659ef8083a6a3c7287f952b9cd1",
+    "revision": "7590c7fbf669ebbc8205821d4bf1f5a2798820ed",
     "root": "visible_human_3d_models/CT",
     "subjects": [
         {
@@ -1756,7 +1756,7 @@
                             "step": 23464547
                         },
                         "02_Female": {
-                            "file": "FEMUR_RIGHT",
+                            "file": "FEMUR_LEFT",
                             "stl": 12512884,
                             "iges": 12982194,
                             "step": 20326047
@@ -1773,7 +1773,7 @@
                             "step": 7323022
                         },
                         "02_Female": {
-                            "file": "FIBULA_RIGHT",
+                            "file": "FIBULA_LEFT",
                             "stl": 3044284,
                             "iges": 3496851,
                             "step": 5390200
@@ -1790,7 +1790,7 @@
                             "step": 20768609
                         },
                         "02_Female": {
-                            "file": "HIP_RIGHT",
+                            "file": "HIP_LEFT",
                             "stl": 14247084,
                             "iges": 14035194,
                             "step": 21639829
@@ -1807,7 +1807,7 @@
                             "step": 1619907
                         },
                         "02_Female": {
-                            "file": "PATELLA_RIGHT",
+                            "file": "PATELLA_LEFT",
                             "stl": 995884,
                             "iges": 1064664,
                             "step": 1566876
@@ -1824,7 +1824,7 @@
                             "step": 17250578
                         },
                         "02_Female": {
-                            "file": "TIBIA_RIGHT",
+                            "file": "TIBIA_LEFT",
                             "stl": 8185284,
                             "iges": 8579925,
                             "step": 13354749
