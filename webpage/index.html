@@ -49,52 +49,81 @@
             <p>
                 This atlas provides publicly available 3D models of human bones for
                 <strong>educational purposes</strong> &mdash; anatomy teaching, visualization,
-                3D printing, and student projects. Each bone is offered both as a surface
-                <strong>mesh</strong> and as a <strong>CAD</strong> model.
+                3D printing, and student projects. The models cover the full skeletons of the
+                <strong>Visible Human Male</strong> and <strong>Visible Human Female</strong>, segmented bone by
+                bone from CT. Each bone is offered as a surface <strong>mesh</strong> (STL) and as a
+                NURBS <strong>CAD</strong> model (IGES and STEP).
+            </p>
+            <p>
+                The files are hosted in the
+                <a href="https://huggingface.co/datasets/BoneHub/visible-human-3d-models" target="_blank"
+                    rel="noopener noreferrer">visible-human-3d-models</a> dataset on Hugging Face (CC BY 4.0).
+                If you use them, please cite the dataset
+                (<a href="https://doi.org/10.57967/hf/10464" target="_blank" rel="noopener noreferrer">doi:10.57967/hf/10464</a>)
+                and the source geometry paper by Andreassen <em>et al.</em>
+                (<a href="https://doi.org/10.1038/s41597-022-01905-2" target="_blank" rel="noopener noreferrer">Sci Data 10, 34, 2023</a>).
             </p>
         </section>
 
         <section class="atlas">
             <h2>Download</h2>
             <div class="stats" id="datasetCount">Loading bones&hellip;</div>
-            <div class="table-container">
-                <table id="bonesTable">
-                    <thead>
-                        <tr>
-                            <th>Bone</th>
-                            <th>Mesh</th>
-                            <th>CAD</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <tr>
-                            <td colspan="3" class="loading">Loading&hellip;</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="atlas-toolbar">
+                <input type="search" id="boneSearch" placeholder="Search bones, e.g. femur or rib 5"
+                    aria-label="Search bones">
+                <button type="button" id="expandAll">Expand all</button>
+                <button type="button" id="collapseAll">Collapse all</button>
+            </div>
+            <div id="regions">
+                <p class="loading">Loading&hellip;</p>
             </div>
         </section>
 
         <section class="viewer">
             <h2>3D Viewer</h2>
             <p>
-                All mesh models together in one interactive scene. <strong>Drag</strong> to rotate,
-                <strong>scroll</strong> to zoom,
-                <strong>right-drag</strong> to pan.
+                The full skeleton of each subject in an interactive scene, coloured by body part.
+                <strong>Drag</strong> to rotate, <strong>scroll</strong> to zoom, <strong>right-drag</strong> to pan.
+                Use the list to show or hide body parts; open a body part to toggle single bones.
             </p>
-            <div class="viewer-layout">
-                <div class="viewer-sidebar">
-                    <div class="viewer-toolbar">
-                        <button type="button" id="viewerReset">Reset view</button>
-                        <label><input type="checkbox" id="viewerRotate"> Auto-rotate</label>
-                        <label><input type="checkbox" id="viewerWire"> Wireframe</label>
+            <div class="viewer-card" data-subject="01_Male">
+                <h3>Visible Human Male <span class="viewer-meta"></span></h3>
+                <div class="viewer-layout">
+                    <div class="viewer-sidebar">
+                        <div class="viewer-toolbar">
+                            <div class="viewer-buttons">
+                                <button type="button" data-action="reset">Reset view</button>
+                                <button type="button" data-action="show-all">Show all</button>
+                                <button type="button" data-action="hide-all">Hide all</button>
+                            </div>
+                            <label><input type="checkbox" data-action="rotate"> Auto-rotate</label>
+                            <label><input type="checkbox" data-action="wireframe"> Wireframe</label>
+                        </div>
+                        <ul class="viewer-list"></ul>
                     </div>
-                    <ul class="viewer-list" id="viewerList">
-                        <li class="viewer-list-empty">Loading model list&hellip;</li>
-                    </ul>
+                    <div class="viewer-canvas">
+                        <div class="viewer-status">Waiting to load 3D models&hellip;</div>
+                    </div>
                 </div>
-                <div class="viewer-canvas" id="viewerCanvas">
-                    <div class="viewer-status" id="viewerStatus">Loading 3D models&hellip;</div>
+            </div>
+            <div class="viewer-card" data-subject="02_Female">
+                <h3>Visible Human Female <span class="viewer-meta"></span></h3>
+                <div class="viewer-layout">
+                    <div class="viewer-sidebar">
+                        <div class="viewer-toolbar">
+                            <div class="viewer-buttons">
+                                <button type="button" data-action="reset">Reset view</button>
+                                <button type="button" data-action="show-all">Show all</button>
+                                <button type="button" data-action="hide-all">Hide all</button>
+                            </div>
+                            <label><input type="checkbox" data-action="rotate"> Auto-rotate</label>
+                            <label><input type="checkbox" data-action="wireframe"> Wireframe</label>
+                        </div>
+                        <ul class="viewer-list"></ul>
+                    </div>
+                    <div class="viewer-canvas">
+                        <div class="viewer-status">Waiting to load 3D models&hellip;</div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -123,7 +152,7 @@
         </div>
     </footer>
 
-    <script src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
     <script type="module" src="js/viewer.js"></script>
 </body>
 

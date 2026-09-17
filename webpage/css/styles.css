@@ -224,14 +224,12 @@ a:hover {
     text-decoration: none;
 }
 
-.btn-link.is-busy {
-    opacity: 0.7;
-    pointer-events: none;
-    cursor: progress;
-}
-
 .unavailable {
     color: #999;
+}
+
+[hidden] {
+    display: none !important;
 }
 
 .loading,
@@ -249,6 +247,140 @@ a:hover {
     color: #842029;
 }
 
+/* Download: toolbar and body-part groups */
+.atlas-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.atlas-toolbar input[type="search"] {
+    flex: 1 1 240px;
+    min-width: 0;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.95rem;
+}
+
+.atlas-toolbar button,
+.viewer-toolbar button {
+    padding: 0.4rem 0.9rem;
+    background-color: var(--secondary-color);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.atlas-toolbar button:hover,
+.viewer-toolbar button:hover {
+    background-color: var(--link-hover);
+}
+
+.region {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 0.6rem;
+    background-color: #fff;
+}
+
+.region > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--primary-color);
+    border-radius: 6px;
+}
+
+.region > summary::-webkit-details-marker {
+    display: none;
+}
+
+.region > summary::before {
+    content: "\25B8";
+    color: var(--secondary-color);
+    transition: transform 0.2s;
+}
+
+.region[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.region > summary:hover {
+    background-color: var(--hover-color);
+}
+
+.region-title {
+    flex: 1;
+}
+
+.region-count {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #666;
+}
+
+.region-body {
+    padding: 0 1rem 1rem;
+}
+
+.region-browse {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+th.subject-head {
+    text-align: center;
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+th.format-head {
+    padding-top: 0.3rem;
+    padding-bottom: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    opacity: 0.9;
+}
+
+th.format-head:nth-child(3n + 1) {
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+th.bone-head {
+    vertical-align: bottom;
+}
+
+td.dl-cell {
+    text-align: center;
+    padding: 0.4rem;
+}
+
+.bone-name {
+    white-space: nowrap;
+}
+
+.btn-link .btn-size {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0.85;
+}
+
+.region-body .table-container {
+    box-shadow: none;
+    border-width: 1px;
+}
+
 /* 3D Viewer */
 .viewer-layout {
     display: flex;
@@ -258,7 +390,7 @@ a:hover {
 }
 
 .viewer-sidebar {
-    flex: 0 0 240px;
+    flex: 0 0 280px;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -282,19 +414,25 @@ a:hover {
     cursor: pointer;
 }
 
-.viewer-toolbar button {
-    padding: 0.4rem 0.9rem;
-    background-color: var(--secondary-color);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background-color 0.3s;
+.viewer-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
 
-.viewer-toolbar button:hover {
-    background-color: var(--link-hover);
+.viewer-card + .viewer-card {
+    margin-top: 2rem;
+}
+
+.viewer-card h3 {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.viewer-meta {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #666;
 }
 
 .viewer-list {
@@ -304,17 +442,73 @@ a:hover {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     overflow-y: auto;
-    max-height: 420px;
-    flex: 1;
+    height: 0;
+    flex: 1 1 auto;
 }
 
-.viewer-list li {
-    padding: 0.35rem 0.4rem;
+.viewer-list ul {
+    list-style: none;
+    margin: 0 0 0.25rem 1.6rem;
+    padding: 0;
+}
+
+.viewer-list ul li {
+    padding: 0.2rem 0.4rem;
     border-radius: 3px;
 }
 
-.viewer-list li:hover {
+.viewer-list ul li:hover {
+    background-color: #e3f2fd;
+}
+
+.viewer-group-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.4rem;
+    border-radius: 3px;
+}
+
+.viewer-group-head:hover {
     background-color: var(--hover-color);
+}
+
+.viewer-group-toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.9rem;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.viewer-group-toggle::after {
+    content: "\25B8";
+    color: #888;
+    transition: transform 0.2s;
+}
+
+.viewer-group-toggle[aria-expanded="true"]::after {
+    transform: rotate(90deg);
+}
+
+.viewer-group-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.viewer-group-count {
+    font-size: 0.75rem;
+    color: #888;
 }
 
 .viewer-list label {
@@ -342,7 +536,7 @@ a:hover {
     position: relative;
     flex: 1;
     min-width: 0;
-    height: 520px;
+    height: 600px;
     background-color: #1b2733;
     border-radius: 6px;
     overflow: hidden;
@@ -376,11 +570,12 @@ a:hover {
     }
 
     .viewer-list {
-        max-height: 200px;
+        height: 220px;
+        flex: none;
     }
 
     .viewer-canvas {
-        height: 360px;
+        height: 420px;
     }
 }
 

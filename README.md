@@ -19,29 +19,41 @@
 
 An anatomical atlas of 3D bones for educational purposes.
 
-This repository hosts publicly available 3D bone models &mdash; each provided both
-as a surface **mesh** and as a **CAD** model &mdash; for use in anatomy teaching,
-visualization, 3D printing, and student projects.
+This repository hosts the website of the atlas. It covers the full skeletons of the
+Visible Human Male and Female, segmented bone by bone from CT. Each bone is available as a
+surface **mesh** (STL) and as a NURBS **CAD** model (IGES and STEP). The model files are
+published in the Hugging Face dataset
+[BoneHub/visible-human-3d-models](https://huggingface.co/datasets/BoneHub/visible-human-3d-models).
 
 
 ## Repository structure
 
 ```
-data/                  Bone models (the source of truth for the atlas)
-  mesh/                Surface meshes (.stl)
-  cad/                 CAD models (.iges)
 webpage/               The website published to GitHub Pages
   index.html
   css/styles.css
-  js/app.js            Builds the download table from the GitHub API
-  js/viewer.js         Three.js viewer for the meshes
+  data/manifest.json   List of body parts, bones and files (generated, see below)
+  js/atlas.js          Shared helpers: manifest, Hugging Face links, bone names
+  js/app.js            Download tables (links point to Hugging Face)
+  js/viewer.js         Three.js viewers, one per subject
+  Mesh/                STL files for the viewers, laid out like CT/Mesh of the dataset:
+                       Mesh/<01_Male|02_Female>/<body part>/<BONE>.stl
   resources/           Logos and icons
+scripts/
+  build_manifest.py    Regenerates webpage/data/manifest.json from a dataset clone
 .github/workflows/     CI: deploys webpage/ to GitHub Pages
 ```
 
-The site has no build step. It reads the contents of `data/` through the GitHub
-API at runtime, so adding or renaming a model file is enough for it to show up
-online &mdash; no page edits required.
+The site has no build step. When the dataset changes, regenerate the manifest from a
+local clone of the Hugging Face repository and commit it:
+
+```
+python scripts/build_manifest.py path/to/visible-human-3d-models
+```
+
+Only files tracked by git in the clone are listed. The 3D viewers load the STL files in
+`webpage/Mesh/`, using the file names in the manifest; bones whose file is missing are
+skipped.
 
 ## Disclaimer
 

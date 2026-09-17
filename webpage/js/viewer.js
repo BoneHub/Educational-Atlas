@@ -1,312 +1,380 @@
 /*
- * Educational Atlas of 3D Bones — interactive 3D viewer
+ * Educational Atlas of 3D Bones — interactive 3D viewers
  *
- * Loads every mesh (STL) from the repository and renders them together in a
- * single Three.js scene. Everything runs client-side in the browser: the file
- * list comes from the GitHub API and the geometry is streamed straight from
- * raw.githubusercontent.com. No server or build step is involved.
+ * One viewer per subject (every element with a data-subject attribute). Each
+ * viewer loads that subject's STL meshes from Mesh/<subject>/<body part>/ next
+ * to index.html, as listed in data/manifest.json, and renders the whole
+ * skeleton in a Three.js scene. A viewer only starts loading once it is
+ * scrolled into view. Everything runs client-side; no build step is involved.
  */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { STLLoader } from "three/addons/loaders/STLLoader.js";
+import { boneLabel, loadManifest, viewerMeshUrl } from "./atlas.js";
 
-const CONFIG = {
-    owner: "BoneHub",
-    repo: "Educational-Atlas",
-    branch: "main",
-    meshPath: "data/mesh",
-};
-
-// Distinct, high-contrast colours assigned to meshes in load order.
+// One colour per body part, in manifest order.
 const PALETTE = [
-    0xe6194b, 0x3cb44b, 0x4363d8, 0xf58231, 0x911eb4,
-    0x46f0f0, 0xf032e6, 0xbcf60c, 0x008080, 0x9a6324,
-    0xfabebe, 0x800000, 0xaaffc3, 0x808000, 0x000075,
+    0xe8d8b0, 0xe6194b, 0x3cb44b, 0x4363d8, 0xf58231, 0x911eb4,
+    0x46c8c8, 0xf032e6, 0xbcd60c, 0x008080, 0xc08040, 0xfabebe,
 ];
 
-const els = {
-    canvas: document.getElementById("viewerCanvas"),
-    status: document.getElementById("viewerStatus"),
-    list: document.getElementById("viewerList"),
-    reset: document.getElementById("viewerReset"),
-    rotate: document.getElementById("viewerRotate"),
-    wire: document.getElementById("viewerWire"),
-};
+// Meshes downloaded in parallel per viewer.
+const CONCURRENCY = 6;
 
-/** Turn a file name into a human-readable bone label (mirrors app.js). */
-function prettyName(fileName) {
-    const stem = fileName.replace(/\.[^.]+$/, "");
-    return (
-        stem
-            .split(/[_\-\s]+/)
-            .filter((part) => part && !/^\d+$/.test(part))
-            .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-            .join(" ")
-            .trim() || stem
-    );
-}
+// The meshes use patient coordinates: +Z superior, -Y anterior, +X left.
+const UP = new THREE.Vector3(0, 0, 1);
+// Direction from the skeleton towards the camera: in front, slightly to its left and above.
+const FRONT_VIEW = new THREE.Vector3(0.35, -1, 0.15).normalize();
 
-let renderer;
-let scene;
-let camera;
-let controls;
-let group;
-const entries = []; // { name, mesh, material, color }
+const hex = (color) => `#${color.toString(16).padStart(6, "0")}`;
 
-/** Probe for a usable WebGL context and return a reason string if unavailable. */
-function webglSupport() {
+/** Probe for a usable WebGL context. */
+function hasWebGL() {
     try {
         const canvas = document.createElement("canvas");
-        const gl =
-            canvas.getContext("webgl2") ||
-            canvas.getContext("webgl") ||
-            canvas.getContext("experimental-webgl");
-        if (!gl) return "no-context";
-        return null;
-    } catch (err) {
-        return err && err.message ? err.message : "exception";
+        return !!(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+    } catch {
+        return false;
     }
 }
 
-function main() {
-    const missing = webglSupport();
-    if (missing) {
-        console.error("WebGL unavailable:", missing);
-        setStatus(
-            "WebGL is disabled or unavailable in this browser, so the 3D viewer cannot start. " +
-            "Enable hardware acceleration / WebGL in your browser settings (see the page notes), " +
-            "update your graphics driver, or try a different browser."
-        );
-        return;
+class SubjectViewer {
+    constructor(root, manifest, subject) {
+        this.root = root;
+        this.manifest = manifest;
+        this.subject = subject;
+        this.canvas = root.querySelector(".viewer-canvas");
+        this.status = root.querySelector(".viewer-status");
+        this.list = root.querySelector(".viewer-list");
+        this.entries = []; // { region, bone, name, mesh, material }
+        this.groups = new Map(); // region id -> { checkbox, entries }
+
+        // Every bone of this subject, grouped by body part.
+        this.regions = manifest.regions
+            .map((region, i) => ({
+                ...region,
+                color: PALETTE[i % PALETTE.length],
+                bones: region.bones.filter((b) => b.files[subject.id]?.stl !== undefined),
+            }))
+            .filter((region) => region.bones.length > 0);
     }
-    try {
-        initScene();
-    } catch (err) {
-        console.error(err);
-        setStatus(
-            "The 3D viewer failed to start: " +
-            (err && err.message ? err.message : String(err)) +
-            ". See the browser console for details."
-        );
-        return;
+
+    setStatus(text) {
+        this.status.textContent = text || "";
+        this.status.hidden = !text;
     }
-    loadAll();
-}
 
-function setStatus(text) {
-    if (!els.status) return;
-    if (text) {
-        els.status.textContent = text;
-        els.status.style.display = "";
-    } else {
-        els.status.style.display = "none";
+    start() {
+        try {
+            this.initScene();
+        } catch (err) {
+            console.error(err);
+            this.setStatus(`The 3D viewer failed to start: ${err.message || err}.`);
+            return;
+        }
+        this.buildList();
+        this.loadAll();
     }
-}
 
-function initScene() {
-    const width = els.canvas.clientWidth || 800;
-    const height = els.canvas.clientHeight || 520;
+    initScene() {
+        const width = this.canvas.clientWidth || 800;
+        const height = this.canvas.clientHeight || 560;
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(width, height);
-    renderer.setClearColor(0x1b2733, 1);
-    els.canvas.appendChild(renderer.domElement);
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setSize(width, height);
+        this.renderer.setClearColor(0x1b2733, 1);
+        this.canvas.appendChild(this.renderer.domElement);
 
-    scene = new THREE.Scene();
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(40, width / height, 1, 100_000);
+        this.camera.up.copy(UP);
+        this.camera.position.copy(FRONT_VIEW).multiplyScalar(3000);
 
-    camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1_000_000);
-    camera.position.set(300, 300, 300);
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.autoRotateSpeed = 1.5;
 
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.autoRotateSpeed = 1.2;
+        this.scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3542, 1.1));
+        // Lights follow the camera so the side being looked at is always lit.
+        const key = new THREE.DirectionalLight(0xffffff, 1.5);
+        key.position.set(1, 1, 2);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.5);
+        fill.position.set(-1, -0.5, 1);
+        this.camera.add(key, fill);
+        this.scene.add(this.camera);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3542, 1.1));
-    const key = new THREE.DirectionalLight(0xffffff, 1.6);
-    key.position.set(1, 1.2, 1);
-    scene.add(key);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.7);
-    fill.position.set(-1, -0.4, -1);
-    scene.add(fill);
+        this.group = new THREE.Group();
+        this.scene.add(this.group);
 
-    group = new THREE.Group();
-    scene.add(group);
+        this.renderer.domElement.addEventListener("webglcontextlost", (event) => {
+            event.preventDefault();
+            this.setStatus("The WebGL context was lost (often a GPU driver reset). Reload the page to retry.");
+        });
 
-    renderer.domElement.addEventListener("webglcontextlost", (event) => {
-        event.preventDefault();
-        setStatus("The WebGL context was lost (often a GPU driver reset). Reload the page to retry.");
-    });
+        new ResizeObserver(() => this.onResize()).observe(this.canvas);
 
-    new ResizeObserver(onResize).observe(els.canvas);
+        const ui = (name) => this.root.querySelector(`[data-action="${name}"]`);
+        this.rotate = ui("rotate");
+        ui("reset").addEventListener("click", () => this.fitView());
+        ui("show-all").addEventListener("click", () => this.setAllVisible(true));
+        ui("hide-all").addEventListener("click", () => this.setAllVisible(false));
+        ui("wireframe").addEventListener("change", (event) => {
+            for (const entry of this.entries) entry.material.wireframe = event.target.checked;
+        });
 
-    els.reset?.addEventListener("click", fitView);
-    els.wire?.addEventListener("change", () => {
-        for (const entry of entries) entry.material.wireframe = els.wire.checked;
-    });
+        this.renderer.setAnimationLoop(() => {
+            this.controls.autoRotate = this.rotate.checked;
+            this.controls.update();
+            this.renderer.render(this.scene, this.camera);
+        });
+    }
 
-    renderer.setAnimationLoop(animate);
-}
+    onResize() {
+        const width = this.canvas.clientWidth;
+        const height = this.canvas.clientHeight;
+        if (!width || !height) return;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+    }
 
-function onResize() {
-    const width = els.canvas.clientWidth;
-    const height = els.canvas.clientHeight;
-    if (!width || !height) return;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-}
+    /** Frame the camera on all visible meshes, looking at the front. */
+    fitView() {
+        const box = new THREE.Box3();
+        for (const entry of this.entries) {
+            if (entry.mesh.visible) box.expandByObject(entry.mesh);
+        }
+        if (box.isEmpty()) return;
 
-function animate() {
-    controls.autoRotate = !!els.rotate?.checked;
-    controls.update();
-    renderer.render(scene, camera);
-}
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const radius = size.length() / 2 || 1;
+        const distance = radius / Math.sin((Math.PI * this.camera.fov) / 360);
 
-/** Frame the camera to the combined bounding box of all visible meshes. */
-function fitView() {
-    const box = new THREE.Box3();
-    let hasVisible = false;
-    for (const entry of entries) {
-        if (entry.mesh.visible) {
-            box.expandByObject(entry.mesh);
-            hasVisible = true;
+        this.camera.position.copy(center).addScaledVector(FRONT_VIEW, distance);
+        this.camera.near = distance / 100;
+        this.camera.far = distance * 100;
+        this.camera.updateProjectionMatrix();
+
+        this.controls.target.copy(center);
+        this.controls.maxDistance = distance * 10;
+        this.controls.update();
+    }
+
+    buildList() {
+        this.list.replaceChildren();
+        for (const region of this.regions) {
+            const item = document.createElement("li");
+            item.className = "viewer-group";
+
+            const head = document.createElement("div");
+            head.className = "viewer-group-head";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.disabled = true;
+            checkbox.title = "Show or hide this body part";
+            checkbox.addEventListener("change", () => {
+                for (const entry of this.groups.get(region.id).entries) {
+                    entry.setVisible(checkbox.checked);
+                }
+                this.syncGroup(region.id);
+            });
+
+            // The name toggles the bone list; the checkbox stays a separate control.
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "viewer-group-toggle";
+            toggle.setAttribute("aria-expanded", "false");
+
+            const swatch = document.createElement("span");
+            swatch.className = "viewer-swatch";
+            swatch.style.backgroundColor = hex(region.color);
+
+            const title = document.createElement("span");
+            title.className = "viewer-group-title";
+            title.textContent = region.label;
+
+            const count = document.createElement("span");
+            count.className = "viewer-group-count";
+            count.textContent = region.bones.length;
+
+            toggle.append(swatch, title, count);
+            head.append(checkbox, toggle);
+
+            const bones = document.createElement("ul");
+            bones.hidden = true;
+            toggle.addEventListener("click", () => {
+                bones.hidden = !bones.hidden;
+                toggle.setAttribute("aria-expanded", String(!bones.hidden));
+            });
+
+            item.append(head, bones);
+            this.list.append(item);
+
+            this.groups.set(region.id, { checkbox, bones, entries: [] });
         }
     }
-    if (!hasVisible) return;
 
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const fitDist = maxDim / (2 * Math.tan((Math.PI * camera.fov) / 360));
-
-    const direction = new THREE.Vector3(1, 0.7, 1).normalize();
-    camera.position.copy(center).add(direction.multiplyScalar(fitDist * 1.7));
-    camera.near = maxDim / 1000;
-    camera.far = maxDim * 1000;
-    camera.updateProjectionMatrix();
-
-    controls.target.copy(center);
-    controls.maxDistance = maxDim * 20;
-    controls.update();
-}
-
-async function fetchMeshFiles() {
-    const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.meshPath}?ref=${CONFIG.branch}`;
-    const res = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
-    if (res.status === 403) {
-        throw new Error("GitHub API rate limit reached. Please try again in a little while.");
-    }
-    if (!res.ok) {
-        throw new Error(`Could not load the mesh list (HTTP ${res.status}).`);
-    }
-    const items = await res.json();
-    if (!Array.isArray(items)) return [];
-    return items
-        .filter((it) => it.type === "file" && /\.stl$/i.test(it.name))
-        .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function loadMesh(loader, file, color) {
-    return new Promise((resolve) => {
-        loader.load(
-            file.download_url,
-            (geometry) => {
-                geometry.computeVertexNormals();
-                const material = new THREE.MeshStandardMaterial({
-                    color,
-                    roughness: 0.55,
-                    metalness: 0.1,
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-                group.add(mesh);
-                entries.push({
-                    name: prettyName(file.name),
-                    mesh,
-                    material,
-                    color,
-                });
-                resolve(true);
-            },
-            undefined,
-            (err) => {
-                console.error(`Failed to load ${file.name}`, err);
-                resolve(false);
-            }
-        );
-    });
-}
-
-async function loadAll() {
-    let files;
-    try {
-        files = await fetchMeshFiles();
-    } catch (err) {
-        setStatus(err.message);
-        els.list.innerHTML = '<li class="viewer-list-empty">Model list unavailable.</li>';
-        return;
-    }
-
-    if (files.length === 0) {
-        setStatus("No mesh models are available yet.");
-        els.list.innerHTML = '<li class="viewer-list-empty">No meshes found.</li>';
-        return;
-    }
-
-    const loader = new STLLoader();
-    let done = 0;
-    setStatus(`Loading 3D models… 0/${files.length}`);
-
-    await Promise.all(
-        files.map((file, i) =>
-            loadMesh(loader, file, PALETTE[i % PALETTE.length]).then((ok) => {
-                done += 1;
-                setStatus(`Loading 3D models… ${done}/${files.length}`);
-                if (ok) fitView();
-            })
-        )
-    );
-
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-    buildList();
-    fitView();
-
-    if (entries.length === 0) {
-        setStatus("The mesh models could not be loaded.");
-    } else {
-        setStatus(null);
-    }
-}
-
-function buildList() {
-    els.list.innerHTML = "";
-    for (const entry of entries) {
+    addListItem(entry) {
+        const group = this.groups.get(entry.region.id);
         const li = document.createElement("li");
         const label = document.createElement("label");
-
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.checked = true;
         checkbox.addEventListener("change", () => {
             entry.mesh.visible = checkbox.checked;
-            fitView();
+            this.syncGroup(entry.region.id);
         });
-
-        const swatch = document.createElement("span");
-        swatch.className = "viewer-swatch";
-        swatch.style.backgroundColor = `#${entry.color.toString(16).padStart(6, "0")}`;
-
         const text = document.createElement("span");
         text.textContent = entry.name;
-
-        label.append(checkbox, swatch, text);
+        label.append(checkbox, text);
         li.append(label);
-        els.list.append(li);
+
+        // Highlight the bone while hovering its name.
+        li.addEventListener("mouseenter", () => entry.material.emissive.setHex(0x664400));
+        li.addEventListener("mouseleave", () => entry.material.emissive.setHex(0x000000));
+
+        entry.setVisible = (visible) => {
+            checkbox.checked = visible;
+            entry.mesh.visible = visible;
+        };
+
+        // Keep the manifest order within the group.
+        group.entries.push(entry);
+        group.entries.sort((a, b) => a.order - b.order);
+        const index = group.entries.indexOf(entry);
+        group.bones.insertBefore(li, group.bones.children[index] || null);
+        group.checkbox.disabled = false;
+        this.syncGroup(entry.region.id);
+    }
+
+    syncGroup(regionId) {
+        const { checkbox, entries } = this.groups.get(regionId);
+        const visible = entries.filter((e) => e.mesh.visible).length;
+        checkbox.checked = visible > 0;
+        checkbox.indeterminate = visible > 0 && visible < entries.length;
+    }
+
+    setAllVisible(visible) {
+        for (const entry of this.entries) entry.setVisible(visible);
+        for (const regionId of this.groups.keys()) this.syncGroup(regionId);
+        if (visible) this.fitView();
+    }
+
+    loadMesh(loader, region, bone, order) {
+        const file = bone.files[this.subject.id].file;
+        return loader.loadAsync(viewerMeshUrl(this.subject.id, region.id, file)).then(
+            (geometry) => {
+                geometry.computeVertexNormals();
+                const material = new THREE.MeshStandardMaterial({
+                    color: region.color,
+                    roughness: 0.6,
+                    metalness: 0.05,
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                this.group.add(mesh);
+                const entry = { region, bone, order, name: boneLabel(bone.id), mesh, material };
+                this.entries.push(entry);
+                this.addListItem(entry);
+                return true;
+            },
+            (err) => {
+                console.warn(`${this.subject.label}: could not load ${file}.stl`, err);
+                return false;
+            }
+        );
+    }
+
+    async loadAll() {
+        const queue = this.regions.flatMap((region) => region.bones.map((bone) => ({ region, bone })));
+        const total = queue.length;
+        if (total === 0) {
+            this.setStatus("No mesh models are listed for this subject.");
+            return;
+        }
+
+        const loader = new STLLoader();
+        let done = 0;
+        let loaded = 0;
+        let next = 0;
+        this.setStatus(`Loading 3D models… 0/${total}`);
+
+        const worker = async () => {
+            while (next < queue.length) {
+                const order = next++;
+                const { region, bone } = queue[order];
+                if (await this.loadMesh(loader, region, bone, order)) {
+                    // Re-frame while the first meshes arrive, then leave the camera alone.
+                    if (++loaded <= 5) this.fitView();
+                }
+                done++;
+                this.setStatus(`Loading 3D models… ${done}/${total}`);
+            }
+        };
+        await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+        this.fitView();
+        if (loaded === 0) {
+            this.setStatus(`The mesh models are not available yet (expected in Mesh/${this.subject.id}/).`);
+            for (const group of this.groups.values()) {
+                group.bones.innerHTML = '<li class="viewer-list-empty">Not available.</li>';
+            }
+        } else if (loaded < total) {
+            this.setStatus(null);
+            console.warn(`${this.subject.label}: ${total - loaded} of ${total} meshes could not be loaded.`);
+        } else {
+            this.setStatus(null);
+        }
     }
 }
 
-// Kick things off only after every module-level binding above has been
-// initialised (otherwise `renderer` and friends are still in the TDZ).
-if (els.canvas) {
-    main();
+async function main() {
+    const roots = [...document.querySelectorAll(".viewer-card[data-subject]")];
+    if (roots.length === 0) return;
+
+    const setAll = (text) => roots.forEach((r) => (r.querySelector(".viewer-status").textContent = text));
+
+    if (!hasWebGL()) {
+        setAll(
+            "WebGL is disabled or unavailable in this browser, so the 3D viewer cannot start. " +
+            "Enable hardware acceleration / WebGL in your browser settings, update your graphics driver, " +
+            "or try a different browser."
+        );
+        return;
+    }
+
+    let manifest;
+    try {
+        manifest = await loadManifest();
+    } catch (err) {
+        setAll(err.message);
+        return;
+    }
+
+    for (const root of roots) {
+        const subject = manifest.subjects.find((s) => s.id === root.dataset.subject);
+        if (!subject) {
+            root.querySelector(".viewer-status").textContent = `Unknown subject "${root.dataset.subject}".`;
+            continue;
+        }
+        root.querySelector(".viewer-meta").textContent =
+            `· ${subject.age} years · ${Math.round(subject.height * 100)} cm · ${subject.weight} kg`;
+        const viewer = new SubjectViewer(root, manifest, subject);
+        // Start loading only when the viewer comes near the screen.
+        const observer = new IntersectionObserver(
+            (records) => {
+                if (records.some((r) => r.isIntersecting)) {
+                    observer.disconnect();
+                    viewer.start();
+                }
+            },
+            { rootMargin: "200px" }
+        );
+        observer.observe(root);
+    }
 }
+
+main();

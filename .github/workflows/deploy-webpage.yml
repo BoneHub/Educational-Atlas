@@ -1,8 +1,7 @@
 # Publishes the static site in webpage/ to GitHub Pages.
 #
-# The bone models in data/ are not part of the artifact: the page reads the
-# file list through the GitHub API at runtime and downloads the models from
-# raw.githubusercontent.com, so only the site itself needs deploying.
+# Downloads are served by the Hugging Face dataset; the site only ships the
+# manifest (webpage/data/manifest.json) and the viewer meshes (webpage/Mesh/).
 #
 # One-time setup: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 name: Deploy webpage

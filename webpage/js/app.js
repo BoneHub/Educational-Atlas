@@ -1,197 +1,137 @@
 /*
- * Educational Atlas of 3D Bones
+ * Educational Atlas of 3D Bones — download tables
  *
- * The list of bones, their names, and the available file formats are read at
- * runtime from the GitHub repository. Nothing about the bones is hard-coded
- * here: add, remove, or rename files in the repository and this page follows.
- *
- * Only the repository coordinates and the folders that hold each model type
- * are configured below.
+ * One collapsible table per body part, one row per bone, with STL, IGES and
+ * STEP download links for each subject. Everything is generated from
+ * data/manifest.json (see js/atlas.js); nothing about the bones is hard-coded.
  */
-const CONFIG = {
-    owner: "BoneHub",
-    repo: "Educational-Atlas",
-    branch: "main",
-    // One entry per table column (besides the "Bone" column).
-    sources: [
-        { key: "mesh", label: "Mesh", path: "data/mesh" },
-        { key: "cad", label: "CAD", path: "data/cad" },
-    ],
-};
+import {
+    FORMATS,
+    boneLabel,
+    downloadUrl,
+    folderUrl,
+    humanSize,
+    loadManifest,
+} from "./atlas.js";
 
 const els = {
-    body: document.getElementById("tableBody"),
+    regions: document.getElementById("regions"),
     count: document.getElementById("datasetCount"),
+    search: document.getElementById("boneSearch"),
+    expand: document.getElementById("expandAll"),
+    collapse: document.getElementById("collapseAll"),
 };
 
-els.body.addEventListener("click", handleDownloadClick);
-
-/** Turn a file name into a human-readable bone label. */
-function prettyName(fileName) {
-    const stem = fileName.replace(/\.[^.]+$/, "");
-    return stem
-        .split(/[_\-\s]+/)
-        .filter((part) => part && !/^\d+$/.test(part)) // drop numeric id segments
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join(" ")
-        .trim() || stem;
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** Key used to match the same bone across different model folders. */
-function boneKey(fileName) {
-    return fileName.replace(/\.[^.]+$/, "").toLowerCase();
-}
-
-function fileExtension(fileName) {
-    const m = fileName.match(/\.([^.]+)$/);
-    return m ? m[1].toUpperCase() : "FILE";
-}
-
-function humanSize(bytes) {
-    if (!bytes && bytes !== 0) return "";
-    const units = ["B", "KB", "MB", "GB"];
-    let n = bytes;
-    let i = 0;
-    while (n >= 1024 && i < units.length - 1) {
-        n /= 1024;
-        i++;
+function renderCell(manifest, subject, region, entry, format) {
+    if (!entry || entry[format.ext] === undefined) {
+        return '<td class="dl-cell"><span class="unavailable" title="Not available for this subject">&mdash;</span></td>';
     }
-    return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
-}
-
-async function fetchFolder(path) {
-    const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}`;
-    const res = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
-    if (res.status === 404) return []; // folder not present yet
-    if (res.status === 403) {
-        throw new Error("GitHub API rate limit reached. Please try again in a little while.");
-    }
-    if (!res.ok) {
-        throw new Error(`Could not load "${path}" (HTTP ${res.status}).`);
-    }
-    const items = await res.json();
-    return Array.isArray(items) ? items.filter((it) => it.type === "file") : [];
-}
-
-function buildRows(folders) {
-    // folders: { mesh: [items], cad: [items], ... }
-    const bones = new Map();
-
-    for (const source of CONFIG.sources) {
-        for (const item of folders[source.key] || []) {
-            const key = boneKey(item.name);
-            if (!bones.has(key)) {
-                bones.set(key, { name: prettyName(item.name), files: {} });
-            }
-            bones.get(key).files[source.key] = item;
-        }
-    }
-
-    return [...bones.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function renderCell(item) {
-    if (!item || !item.download_url) {
-        return '<span class="unavailable">&mdash;</span>';
-    }
-    const ext = fileExtension(item.name);
-    const size = humanSize(item.size);
-    const title = size ? `${item.name} (${size})` : item.name;
-    // A plain link to raw.githubusercontent.com opens text-based formats (e.g.
-    // IGES) inline in the browser instead of downloading. We keep the href for
-    // right-click / middle-click, but the click handler fetches the file and
-    // saves it as a real download.
-    const safeName = item.name.replace(/"/g, "&quot;");
+    const fileName = `${entry.file}.${format.ext}`;
+    const size = humanSize(entry[format.ext]);
     return (
-        `<a class="btn-link" href="${item.download_url}" download="${safeName}"` +
-        ` data-download-url="${item.download_url}" data-download-name="${safeName}"` +
-        ` title="${title}">Download ${ext}</a>`
+        `<td class="dl-cell"><a class="btn-link" href="${downloadUrl(manifest, subject.id, region.id, entry.file, format)}"` +
+        ` download="${escapeHtml(fileName)}" title="${escapeHtml(`${subject.label}: ${fileName} (${size})`)}">` +
+        `${format.label}<span class="btn-size">${size}</span></a></td>`
     );
 }
 
-async function handleDownloadClick(event) {
-    const link = event.target.closest("a[data-download-url]");
-    if (!link) return;
+function renderRegion(manifest, region) {
+    const { subjects } = manifest;
 
-    // Let modified clicks (new tab, etc.) behave normally.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const subjectHeads = subjects
+        .map((s) => `<th colspan="${FORMATS.length}" class="subject-head">${escapeHtml(s.label)}</th>`)
+        .join("");
+    const formatHeads = subjects
+        .map(() => FORMATS.map((f) => `<th class="format-head">${f.label}</th>`).join(""))
+        .join("");
 
-    event.preventDefault();
-    if (link.dataset.busy) return;
-
-    const url = link.dataset.downloadUrl;
-    const fileName = link.dataset.downloadName || "model";
-    const original = link.textContent;
-    link.dataset.busy = "1";
-    link.classList.add("is-busy");
-    link.textContent = "Downloading…";
-
-    try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = objectUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
-    } catch (err) {
-        console.error("Download failed", err);
-        // Fall back to opening the raw file directly.
-        window.open(url, "_blank", "noopener");
-    } finally {
-        delete link.dataset.busy;
-        link.classList.remove("is-busy");
-        link.textContent = original;
-    }
-}
-
-function render(rows) {
-    if (rows.length === 0) {
-        els.body.innerHTML =
-            '<tr><td colspan="3" class="empty-state">No bones are available yet.</td></tr>';
-        els.count.textContent = "0 bones";
-        return;
-    }
-
-    els.body.innerHTML = rows
-        .map((row) => {
-            const cells = CONFIG.sources
-                .map((s) => `<td>${renderCell(row.files[s.key])}</td>`)
+    const rows = region.bones
+        .map((bone) => {
+            const label = boneLabel(bone.id);
+            const cells = subjects
+                .map((s) => FORMATS.map((f) => renderCell(manifest, s, region, bone.files[s.id], f)).join(""))
                 .join("");
-            return `<tr><td class="bone-name">${row.name}</td>${cells}</tr>`;
+            return `<tr data-search="${escapeHtml(`${label} ${bone.id}`.toLowerCase())}"><td class="bone-name">${escapeHtml(label)}</td>${cells}</tr>`;
         })
         .join("");
 
-    const fileCount = rows.reduce(
-        (acc, r) => acc + Object.keys(r.files).length,
-        0
-    );
-    els.count.textContent = `${rows.length} bone${rows.length === 1 ? "" : "s"} · ${fileCount} downloadable file${fileCount === 1 ? "" : "s"}`;
+    const browse = subjects
+        .map((s) => `<a href="${folderUrl(manifest, "Mesh", s.id, region.id)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`)
+        .join(" · ");
+
+    const details = document.createElement("details");
+    details.className = "region";
+    details.innerHTML = `
+        <summary>
+            <span class="region-title">${escapeHtml(region.label)}</span>
+            <span class="region-count">${region.bones.length} bone${region.bones.length === 1 ? "" : "s"}</span>
+        </summary>
+        <div class="region-body">
+            <p class="region-browse">Browse on Hugging Face: ${browse}</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th rowspan="2" class="bone-head">Bone</th>${subjectHeads}</tr>
+                        <tr>${formatHeads}</tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        </div>`;
+    return details;
 }
 
-function showError(message) {
-    els.body.innerHTML = `<tr><td colspan="3"><div class="error-state">${message}</div></td></tr>`;
-    els.count.textContent = "Could not load the atlas";
+function render(manifest) {
+    els.regions.replaceChildren(...manifest.regions.map((r) => renderRegion(manifest, r)));
+
+    const counts = manifest.subjects.map((s) => {
+        const n = manifest.regions.reduce(
+            (acc, r) => acc + r.bones.filter((b) => b.files[s.id]).length,
+            0
+        );
+        return `${n} ${s.label.toLowerCase()}`;
+    });
+    els.count.textContent =
+        `${manifest.regions.length} body parts · bones: ${counts.join(", ")} · ` +
+        `each as STL mesh and IGES/STEP CAD`;
+}
+
+function applySearch() {
+    const query = els.search.value.trim().toLowerCase();
+    for (const details of els.regions.querySelectorAll("details.region")) {
+        let matches = 0;
+        for (const row of details.querySelectorAll("tbody tr")) {
+            const hit = !query || row.dataset.search.includes(query);
+            row.hidden = !hit;
+            if (hit) matches++;
+        }
+        details.hidden = matches === 0;
+        if (query) details.open = matches > 0;
+    }
+}
+
+function setAllOpen(open) {
+    for (const details of els.regions.querySelectorAll("details.region:not([hidden])")) {
+        details.open = open;
+    }
 }
 
 async function init() {
     try {
-        const results = await Promise.all(
-            CONFIG.sources.map((s) => fetchFolder(s.path))
-        );
-        const folders = {};
-        CONFIG.sources.forEach((s, i) => {
-            folders[s.key] = results[i];
-        });
-        render(buildRows(folders));
+        render(await loadManifest());
     } catch (err) {
         console.error(err);
-        showError(err.message || "Something went wrong while loading the atlas.");
+        els.regions.innerHTML = `<div class="error-state">${escapeHtml(err.message || "Something went wrong while loading the atlas.")}</div>`;
+        els.count.textContent = "Could not load the atlas";
+        return;
     }
+    els.search.addEventListener("input", applySearch);
+    els.expand.addEventListener("click", () => setAllOpen(true));
+    els.collapse.addEventListener("click", () => setAllOpen(false));
 }
 
 init();
