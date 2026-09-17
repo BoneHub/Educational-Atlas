@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Educational Atlas of 3D Bones</title>
+    <title>Educational Atlas</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="icon" href="resources/logo.png">
     <script type="importmap">
@@ -26,8 +26,9 @@
                     <img src="resources/logo.png" alt="BoneHub logo" class="site-logo">
                 </a>
                 <div class="header-intro">
-                    <h1>Educational Atlas of 3D Bones</h1>
-                    <p class="subtitle">Downloadable 3D bone models for teaching and learning.</p>
+                    <h1>Educational Atlas</h1>
+                    <p class="subtitle">Two complete human skeletons, free STL meshes and
+                        IGES/STEP CAD models for education.</p>
                 </div>
                 <a href="https://github.com/BoneHub/Educational-Atlas" target="_blank" rel="noopener noreferrer"
                     class="github-link" title="View on GitHub">
@@ -37,9 +38,6 @@
                     </svg>
                 </a>
             </div>
-            <p class="note">
-                This page and the models are still under development and not yet usable.
-            </p>
         </div>
     </header>
 
@@ -58,10 +56,8 @@
                 The files are hosted in the
                 <a href="https://huggingface.co/datasets/BoneHub/visible-human-3d-models" target="_blank"
                     rel="noopener noreferrer">visible-human-3d-models</a> dataset on Hugging Face (CC BY 4.0).
-                If you use them, please cite the dataset
-                (<a href="https://doi.org/10.57967/hf/10464" target="_blank" rel="noopener noreferrer">doi:10.57967/hf/10464</a>)
-                and the source geometry paper by Andreassen <em>et al.</em>
-                (<a href="https://doi.org/10.1038/s41597-022-01905-2" target="_blank" rel="noopener noreferrer">Sci Data 10, 34, 2023</a>).
+                If you use them, please see <a href="#citation">Citation</a> for what to
+                cite.
             </p>
         </section>
 
@@ -129,9 +125,34 @@
             </div>
         </section>
 
+        <section class="cite" id="citation">
+            <h2>Citation</h2>
+            <p>
+                The models are released under
+                <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank"
+                    rel="noopener noreferrer">CC BY 4.0</a>. You are free to share and adapt them, also for
+                teaching material and publications, as long as you give credit. If you use the atlas, please
+                cite both the dataset and the source dataset paper.
+            </p>
+
+            <p class="cite-ref">
+                Alavi, S. H., &amp; Asseln, M. (2026). <em>visible-human-3d-models</em> [Dataset]. Hugging Face.
+                <a href="https://doi.org/10.57967/hf/10464" target="_blank"
+                    rel="noopener noreferrer">https://doi.org/10.57967/hf/10464</a>
+            </p>
+
+            <p class="cite-ref">
+                Andreassen, T. E., Hume, D. R., Hamilton, L. D., Walker, K. E., Higinbotham, S. E., &amp;
+                Shelburne, K. B. (2023). Three Dimensional Lower Extremity Musculoskeletal Geometry of the
+                Visible Human Female and Male. <em>Scientific Data</em>, 10, 34.
+                <a href="https://doi.org/10.1038/s41597-022-01905-2" target="_blank"
+                    rel="noopener noreferrer">https://doi.org/10.1038/s41597-022-01905-2</a>
+            </p>
+        </section>
+
         <section class="contact">
             <h2>📬 Contact</h2>
-            <p>This repository is maintained by <strong>Hamid Alavi</strong> and <strong>Malte Asseln</strong></p>
+            <p>This page is maintained by <strong>Hamid Alavi</strong> and <strong>Malte Asseln</strong></p>
             <p>Department of Biomechanical Engineering, University of Twente, The Netherlands</p>
             <p>
                 <a href="mailto:hamid.alavi@utwente.nl">hamid.alavi@utwente.nl</a> |
@@ -146,9 +167,7 @@
                 <strong>Disclaimer:</strong> The bone models provided here are intended for educational purposes only.
                 They are not suitable for medical diagnosis or treatment planning. Users should exercise caution and
                 consult appropriate professionals when using these models in any context that may impact health or
-                safety. Visit the <a href="https://github.com/BoneHub/Educational-Atlas" target="_blank"
-                    rel="noopener noreferrer">GitHub
-                    repository</a> for more information.
+                safety.
             </p>
         </div>
     </footer>

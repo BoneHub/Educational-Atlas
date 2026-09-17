@@ -593,6 +593,13 @@ td.dl-cell {
     }
 }
 
+/* Citation */
+.cite-ref {
+    padding-left: 1rem;
+    border-left: 3px solid var(--border-color);
+    color: #444;
+}
+
 /* Footer */
 footer {
     background-color: var(--primary-color);
