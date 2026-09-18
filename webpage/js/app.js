@@ -26,14 +26,29 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+/**
+ * Clicks on links carrying data-track are counted as GoatCounter events (see
+ * the "Events" list on the GoatCounter dashboard). A delegated listener is used
+ * because the tables are rendered after GoatCounter's script may have loaded.
+ */
+function trackClicks() {
+    document.addEventListener("click", (event) => {
+        const link = event.target.closest("a[data-track]");
+        if (!link || !window.goatcounter?.count) return;
+        window.goatcounter.count({ path: link.dataset.track, title: link.title || link.textContent.trim(), event: true });
+    });
+}
+
 function renderCell(manifest, subject, region, entry, format) {
     if (!entry || entry[format.ext] === undefined) {
         return '<td class="dl-cell"><span class="unavailable" title="Not available for this subject">&mdash;</span></td>';
     }
     const fileName = `${entry.file}.${format.ext}`;
     const size = humanSize(entry[format.ext]);
+    const track = `download/${subject.id}/${region.id}/${fileName}`;
     return (
         `<td class="dl-cell"><a class="btn-link" href="${downloadUrl(manifest, subject.id, region.id, entry.file, format)}"` +
+        ` data-track="${escapeHtml(track)}"` +
         ` download="${escapeHtml(fileName)}" title="${escapeHtml(`${subject.label}: ${fileName} (${size})`)}">` +
         `${format.label}<span class="btn-size">${size}</span></a></td>`
     );
@@ -60,7 +75,7 @@ function renderRegion(manifest, region) {
         .join("");
 
     const browse = subjects
-        .map((s) => `<a href="${folderUrl(manifest, "Mesh", s.id, region.id)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`)
+        .map((s) => `<a href="${folderUrl(manifest, "Mesh", s.id, region.id)}" data-track="${escapeHtml(`browse/${s.id}/${region.id}`)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.label)}</a>`)
         .join(" · ");
 
     const details = document.createElement("details");
@@ -121,6 +136,7 @@ function setAllOpen(open) {
 }
 
 async function init() {
+    trackClicks();
     try {
         render(await loadManifest());
     } catch (err) {
