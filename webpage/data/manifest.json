@@ -1,6 +1,6 @@
 {
     "repo": "BoneHub/visible-human-3d-models",
-    "revision": "ac8de2b38f5ae1a0996053ca0639dd6ae43358f1",
+    "revision": "7d520ffe410b3f79d82991b8368b2d51844feb80",
     "root": "visible_human_3d_models/CT",
     "subjects": [
         {
@@ -996,9 +996,9 @@
                     "files": {
                         "01_Male": {
                             "file": "SCAPULA_LEFT",
-                            "stl": 6600484,
-                            "iges": 9195849,
-                            "step": 14144664
+                            "stl": 6593484,
+                            "iges": 8346969,
+                            "step": 12961661
                         },
                         "02_Female": {
                             "file": "SCAPULA_LEFT",
@@ -1087,9 +1087,9 @@
                     "files": {
                         "01_Male": {
                             "file": "SCAPULA_RIGHT",
-                            "stl": 6616484,
-                            "iges": 9276120,
-                            "step": 14302520
+                            "stl": 6633484,
+                            "iges": 8667810,
+                            "step": 13467205
                         },
                         "02_Female": {
                             "file": "SCAPULA_RIGHT",
