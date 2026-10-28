@@ -1,6 +1,6 @@
 {
     "repo": "BoneHub/visible-human-3d-models",
-    "revision": "7d520ffe410b3f79d82991b8368b2d51844feb80",
+    "revision": "53bd62452ae3fc34ba0fa6188517cd8ca9bf4a10",
     "root": "visible_human_3d_models/CT",
     "subjects": [
         {
@@ -32,13 +32,13 @@
                     "files": {
                         "01_Male": {
                             "file": "SKULL_CRANIAL_MAXILLA",
-                            "stl": 30333084,
+                            "stl": 29975884,
                             "iges": 47174886,
                             "step": 44942218
                         },
                         "02_Female": {
                             "file": "SKULL_CRANIAL_MAXILLA",
-                            "stl": 41564484,
+                            "stl": 41478484,
                             "iges": 41854239,
                             "step": 64029502
                         }
@@ -49,13 +49,13 @@
                     "files": {
                         "01_Male": {
                             "file": "SKULL_MANDIBLE",
-                            "stl": 3508084,
+                            "stl": 3503684,
                             "iges": 5907654,
                             "step": 8723911
                         },
                         "02_Female": {
                             "file": "SKULL_MANDIBLE",
-                            "stl": 3797284,
+                            "stl": 3785484,
                             "iges": 4622022,
                             "step": 6757487
                         }
@@ -491,13 +491,13 @@
                     "files": {
                         "01_Male": {
                             "file": "SACRUM",
-                            "stl": 7069684,
+                            "stl": 7057484,
                             "iges": 23580477,
                             "step": 35894127
                         },
                         "02_Female": {
                             "file": "SACRUM",
-                            "stl": 9577684,
+                            "stl": 9572284,
                             "iges": 24594030,
                             "step": 36799304
                         }
@@ -514,7 +514,7 @@
                     "files": {
                         "01_Male": {
                             "file": "RIB_1_LEFT",
-                            "stl": 768084,
+                            "stl": 767684,
                             "iges": 2442636,
                             "step": 3657861
                         },
@@ -531,7 +531,7 @@
                     "files": {
                         "01_Male": {
                             "file": "RIB_1_RIGHT",
-                            "stl": 885484,
+                            "stl": 883884,
                             "iges": 2571345,
                             "step": 3870238
                         },
@@ -582,7 +582,7 @@
                     "files": {
                         "01_Male": {
                             "file": "RIB_3_LEFT",
-                            "stl": 1417284,
+                            "stl": 1416084,
                             "iges": 4078917,
                             "step": 6438360
                         },
@@ -616,7 +616,7 @@
                     "files": {
                         "01_Male": {
                             "file": "RIB_4_LEFT",
-                            "stl": 1593684,
+                            "stl": 1588484,
                             "iges": 4564431,
                             "step": 7176285
                         },
@@ -922,13 +922,13 @@
                     "files": {
                         "01_Male": {
                             "file": "STERNUM",
-                            "stl": 3354484,
+                            "stl": 3353684,
                             "iges": 11016648,
                             "step": 17125360
                         },
                         "02_Female": {
                             "file": "STERNUM",
-                            "stl": 3089684,
+                            "stl": 3089284,
                             "iges": 8203032,
                             "step": 12192273
                         }
@@ -945,7 +945,7 @@
                     "files": {
                         "01_Male": {
                             "file": "CLAVICLE_LEFT",
-                            "stl": 1568684,
+                            "stl": 1565084,
                             "iges": 2013741,
                             "step": 3106836
                         },
@@ -1036,7 +1036,7 @@
                     "files": {
                         "01_Male": {
                             "file": "CLAVICLE_RIGHT",
-                            "stl": 1540684,
+                            "stl": 1532284,
                             "iges": 2369493,
                             "step": 3618292
                         },
@@ -1314,7 +1314,7 @@
                     "files": {
                         "01_Male": {
                             "file": "PHALANGE_HAND_4_LEFT",
-                            "stl": 510684,
+                            "stl": 509884,
                             "iges": 5415984,
                             "step": 8564810
                         },
@@ -1456,7 +1456,7 @@
                     "files": {
                         "01_Male": {
                             "file": "HAMATE_RIGHT",
-                            "stl": 230484,
+                            "stl": 230084,
                             "iges": 2813292,
                             "step": 4283136
                         },
@@ -1768,7 +1768,7 @@
                     "files": {
                         "01_Male": {
                             "file": "FIBULA_LEFT",
-                            "stl": 2967084,
+                            "stl": 2955484,
                             "iges": 4730157,
                             "step": 7323022
                         },
@@ -1785,7 +1785,7 @@
                     "files": {
                         "01_Male": {
                             "file": "HIP_LEFT",
-                            "stl": 10230884,
+                            "stl": 10208684,
                             "iges": 13217013,
                             "step": 20768609
                         },
@@ -1916,7 +1916,7 @@
                         },
                         "02_Female": {
                             "file": "TIBIA_RIGHT",
-                            "stl": 8270484,
+                            "stl": 8255684,
                             "iges": 8773029,
                             "step": 13624034
                         }
@@ -1933,7 +1933,7 @@
                     "files": {
                         "01_Male": {
                             "file": "CALCANEUS_LEFT",
-                            "stl": 1890884,
+                            "stl": 1881084,
                             "iges": 19338669,
                             "step": 31238120
                         },
@@ -1967,7 +1967,7 @@
                     "files": {
                         "01_Male": {
                             "file": "INTERMEDIATE_CUNEIFORM_LEFT",
-                            "stl": 246084,
+                            "stl": 243284,
                             "iges": 2508408,
                             "step": 3918457
                         },
@@ -1990,7 +1990,7 @@
                         },
                         "02_Female": {
                             "file": "LATERAL_CUNEIFORM_LEFT",
-                            "stl": 377284,
+                            "stl": 376484,
                             "iges": 3048921,
                             "step": 4698580
                         }
@@ -2041,7 +2041,7 @@
                         },
                         "02_Female": {
                             "file": "METATARSAL_2_LEFT",
-                            "stl": 683884,
+                            "stl": 683084,
                             "iges": 5251797,
                             "step": 8219991
                         }
@@ -2086,7 +2086,7 @@
                     "files": {
                         "01_Male": {
                             "file": "METATARSAL_5_LEFT",
-                            "stl": 534284,
+                            "stl": 531884,
                             "iges": 5825439,
                             "step": 9234447
                         },
@@ -2205,7 +2205,7 @@
                     "files": {
                         "01_Male": {
                             "file": "TALUS_LEFT",
-                            "stl": 1240684,
+                            "stl": 1238684,
                             "iges": 12909213,
                             "step": 20703943
                         },
@@ -2387,7 +2387,7 @@
                         },
                         "02_Female": {
                             "file": "METATARSAL_5_RIGHT",
-                            "stl": 621484,
+                            "stl": 615484,
                             "iges": 5191128,
                             "step": 8134039
                         }
@@ -2438,7 +2438,7 @@
                         },
                         "02_Female": {
                             "file": "PHALANGE_FOOT_2_RIGHT",
-                            "stl": 356284,
+                            "stl": 352884,
                             "iges": 2843181,
                             "step": 4391572
                         }
